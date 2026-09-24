@@ -2,8 +2,13 @@ import { NextResponse } from 'next/server';
 import { getMockPlan, validatePlan } from '../../lib/mockPlan';
 import type { UserData } from '../../types';
 
-// Runs on the server only. OPENAI_API_KEY (no NEXT_PUBLIC_ prefix) is never
+// Runs on the server only. The API key (no NEXT_PUBLIC_ prefix) is never
 // sent to the browser.
+//
+// Works with any OpenAI-compatible provider:
+//   Gemini (free): AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+//   Groq (free):   AI_BASE_URL=https://api.groq.com/openai/v1
+//   OpenAI (paid): leave AI_BASE_URL empty
 export async function POST(req: Request) {
   let userData: UserData;
   try {
@@ -23,23 +28,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing or invalid profile fields' }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+  const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = process.env.AI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
   if (!apiKey) {
     return NextResponse.json({ plan: getMockPlan(userData), source: 'mock' });
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
+        model,
         temperature: 0.7,
-        max_tokens: 800,
+        max_tokens: 2000,
         messages: [
           {
             role: 'system',
@@ -64,7 +70,10 @@ Use exactly this JSON shape (sets and reps are numbers):
     });
 
     if (!response.ok) {
-      console.error('OpenAI error:', response.status);
+      const errBody = await response.json().catch(() => null);
+      console.error(
+        `AI provider error ${response.status}: ${errBody?.error?.code ?? errBody?.error?.type ?? 'unknown'} - ${errBody?.error?.message ?? response.statusText}`
+      );
       return NextResponse.json({ plan: getMockPlan(userData), source: 'mock' });
     }
 
