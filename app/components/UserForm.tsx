@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
+import type { UserData } from '../types';
 
-export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }) {
+export default function UserForm({ onSubmit }: { onSubmit: (data: UserData) => void }) {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -16,10 +17,11 @@ export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }
     e.preventDefault();
     onSubmit({
       ...formData,
-      age: parseInt(formData.age),
-      height: parseInt(formData.height),
-      weight: parseInt(formData.weight)
-    });
+      name: formData.name.trim(),
+      age: parseInt(formData.age, 10),
+      height: parseFloat(formData.height),
+      weight: parseFloat(formData.weight),
+    } as UserData);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -37,6 +39,7 @@ export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }
             type="text" 
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
+            maxLength={50}
             className="border p-2 w-full rounded" 
             required
           />
@@ -48,6 +51,9 @@ export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }
             type="number" 
             value={formData.age}
             onChange={(e) => handleChange('age', e.target.value)}
+            min={10}
+            max={100}
+            step={1}
             className="border p-2 w-full rounded"
             required
           />
@@ -74,6 +80,9 @@ export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }
             type="number" 
             value={formData.height}
             onChange={(e) => handleChange('height', e.target.value)}
+            min={50}
+            max={250}
+            step="0.1"
             className="border p-2 w-full rounded"
             required
           />
@@ -85,6 +94,9 @@ export default function UserForm({ onSubmit }: { onSubmit: (data: any) => void }
             type="number" 
             value={formData.weight}
             onChange={(e) => handleChange('weight', e.target.value)}
+            min={20}
+            max={300}
+            step="0.1"
             className="border p-2 w-full rounded"
             required
           />

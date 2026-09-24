@@ -3,19 +3,20 @@ import { useState } from 'react';
 import UserForm from './components/UserForm';
 import VoicePlayer from './components/VoicePlayer';
 import { exportToPDF } from './lib/pdfExport';
+import { generateFitnessPlan } from './lib/api';
+import { getMockPlan } from './lib/mockPlan';
+import type { FitnessPlan, UserData } from './types';
 
 export default function Home() {
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [plan, setPlan] = useState<any>(null);
+  const [plan, setPlan] = useState<FitnessPlan | null>(null);
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = async (data: UserData) => {
     setUserData(data);
     setLoading(true);
     
     try {
-      // Import and use the AI function
-      const { generateFitnessPlan } = await import('./lib/api');
       const aiPlan = await generateFitnessPlan(data);
       setPlan(aiPlan);
     } catch (error) {
@@ -25,70 +26,6 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Fallback mock data function
-  const getMockPlan = (userData: any) => {
-    let workout = [];
-    let diet = {};
-    
-    if (userData.fitnessGoal === 'weight_loss') {
-      workout = [
-        { exercise: "Cardio: Jumping Jacks", sets: 4, reps: 45, rest: "30s" },
-        { exercise: "Bodyweight Squats", sets: 3, reps: 15, rest: "45s" },
-        { exercise: "Push-ups", sets: 3, reps: 12, rest: "45s" },
-        { exercise: "Plank", sets: 3, reps: 1, rest: "30s" }
-      ];
-      diet = {
-        breakfast: "Oatmeal with berries and protein powder",
-        lunch: "Grilled chicken salad with light dressing",
-        dinner: "Steamed fish with roasted vegetables",
-        snacks: "Apple with almond butter"
-      };
-    } else if (userData.fitnessGoal === 'muscle_gain') {
-      workout = [
-        { exercise: "Push-ups", sets: 4, reps: 12, rest: "60s" },
-        { exercise: "Bodyweight Squats", sets: 4, reps: 15, rest: "60s" },
-        { exercise: "Plank", sets: 3, reps: 1, rest: "45s" },
-        { exercise: "Lunges", sets: 3, reps: 10, rest: "45s" }
-      ];
-      diet = {
-        breakfast: "Scrambled eggs with whole wheat toast",
-        lunch: "Grilled chicken with quinoa and vegetables",
-        dinner: "Salmon with sweet potato and greens",
-        snacks: "Greek yogurt with nuts"
-      };
-    } else {
-      // Maintenance/default
-      workout = [
-        { exercise: "Push-ups", sets: 3, reps: 15, rest: "60s" },
-        { exercise: "Bodyweight Squats", sets: 3, reps: 20, rest: "45s" },
-        { exercise: "Plank", sets: 3, reps: 1, rest: "30s" },
-        { exercise: "Jumping Jacks", sets: 3, reps: 30, rest: "45s" }
-      ];
-      diet = {
-        breakfast: "Oatmeal with fruits and nuts",
-        lunch: "Grilled chicken salad with olive oil",
-        dinner: "Steamed fish with vegetables",
-        snacks: "Greek yogurt and apple"
-      };
-    }
-
-    return {
-      workout: {
-        dailyRoutine: workout
-      },
-      diet: {
-        meals: diet
-      },
-      tips: [
-        "Stay hydrated - drink at least 8 glasses of water daily",
-        "Get 7-8 hours of sleep for optimal recovery",
-        "Consistency is more important than intensity",
-        `Focus on your goal: ${userData.fitnessGoal}`,
-        "Listen to your body and rest when needed"
-      ]
-    };
   };
 
   const resetApp = () => {
@@ -143,11 +80,11 @@ export default function Home() {
                     </div>
                     <div className="text-center p-3 bg-green-50 rounded-lg">
                       <div className="font-semibold text-green-800">Goal</div>
-                      <div className="text-lg font-bold capitalize">{userData.fitnessGoal.replace('_', ' ')}</div>
+                      <div className="text-lg font-bold capitalize">{userData.fitnessGoal.replace(/_/g, ' ')}</div>
                     </div>
                     <div className="text-center p-3 bg-purple-50 rounded-lg">
                       <div className="font-semibold text-purple-800">Level</div>
-                      <div className="text-lg font-bold">{userData.fitnessLevel}</div>
+                      <div className="text-lg font-bold capitalize">{userData.fitnessLevel}</div>
                     </div>
                     <div className="text-center p-3 bg-orange-50 rounded-lg">
                       <div className="font-semibold text-orange-800">BMI</div>
@@ -163,7 +100,7 @@ export default function Home() {
                       💪 Workout Routine
                     </h3>
                     <div className="space-y-4">
-                      {plan.workout.dailyRoutine.map((exercise: any, index: number) => (
+                      {plan.workout.dailyRoutine.map((exercise, index) => (
                         <div key={index} className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-start">
                             <div>
@@ -213,7 +150,7 @@ export default function Home() {
                     </h3>
                     <div className="bg-purple-50 rounded-lg p-4">
                       <ul className="space-y-3">
-                        {plan.tips.map((tip: string, index: number) => (
+                        {plan.tips.map((tip, index) => (
                           <li key={index} className="flex items-start gap-3">
                             <span className="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mt-0.5 flex-shrink-0">
                               {index + 1}
@@ -228,7 +165,7 @@ export default function Home() {
                   {/* Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6 border-t">
                     <VoicePlayer text={
-                      `Workout Plan: ${plan.workout.dailyRoutine.map((ex: any) => 
+                      `Workout Plan: ${plan.workout.dailyRoutine.map((ex) => 
                         `${ex.exercise}: ${ex.sets} sets of ${ex.reps} reps with ${ex.rest} rest`
                       ).join('. ')}. Diet Plan: Breakfast: ${plan.diet.meals.breakfast}. Lunch: ${plan.diet.meals.lunch}. Dinner: ${plan.diet.meals.dinner}. Snacks: ${plan.diet.meals.snacks}. Tips: ${plan.tips.join('. ')}`
                     } />
@@ -256,7 +193,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="text-center mt-12 text-gray-500 text-sm">
           <p>Built with Next.js, TypeScript, Tailwind CSS & OpenAI</p>
-          <p className="mt-1">AI Fitness Coach © 2024</p>
+          <p className="mt-1">AI Fitness Coach © {new Date().getFullYear()}</p>
         </footer>
       </div>
     </main>
